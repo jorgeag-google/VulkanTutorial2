@@ -26,12 +26,15 @@ private:
     void createInstance();
     bool checkValidationLayerSupport();
     void pickPhysicalDevice();
+    void createLogicalDevice();
     bool isDeviceSuitable(const VkPhysicalDevice& device);
     std::string getDeviceInfo(const VkPhysicalDevice& device);
     QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device);
     
     VkInstance m_instance;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+    VkDevice m_device;
+    VkQueue m_graphicsQueue;
     
     // VK debug related
     VkDebugUtilsMessengerEXT m_debugMessenger;

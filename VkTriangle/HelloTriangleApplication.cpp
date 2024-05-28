@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <optional>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -35,8 +36,49 @@ void HelloTriangleApplication::initVulkan() {
 	createInstance();
 	setupDebugMessenger();
 	pickPhysicalDevice();
+	createLogicalDevice();
 }
 
+void HelloTriangleApplication::createLogicalDevice() {
+	QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+
+	VkDeviceQueueCreateInfo queueCreateInfo{};
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+	queueCreateInfo.queueCount = 1;
+	float queuePriority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &queuePriority;
+	
+	// Empthy for now, but we will need to have it
+	VkPhysicalDeviceFeatures deviceFeatures{};
+
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pQueueCreateInfos = &queueCreateInfo;
+	createInfo.queueCreateInfoCount = 1;
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = 0;
+
+	if (m_debug) {
+		createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
+		createInfo.ppEnabledLayerNames = m_validationLayers.data();
+	} else {
+		createInfo.enabledLayerCount = 0;
+	}
+	
+	if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
+    	throw std::runtime_error("failed to create logical device!");
+	}
+
+	if (m_debug) {
+		std::cout << "Device created!" << std::endl;
+	}
+	
+	vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
+	if (m_debug) {
+		std::cout << "Graphics queue created!" << std::endl;
+	}
+}
 
 void HelloTriangleApplication::pickPhysicalDevice() {
 	uint32_t deviceCount = 0;
@@ -53,11 +95,21 @@ void HelloTriangleApplication::pickPhysicalDevice() {
 		std::cout << "There are " << deviceCount << " devices" << std::endl;
 	}
 
+	std::optional<size_t> deviceIndex;
+	int i = 0;
 	for (const auto& device : devices) {
-    	if (isDeviceSuitable(device)) {
-			m_physicalDevice = device;
-			break;
+		if (m_debug) {
+			std::cout << i << ":" << std::endl;
 		}
+		
+    	if (isDeviceSuitable(device) && !deviceIndex.has_value()) {
+			deviceIndex = i;
+		}
+		++i;
+    }
+    
+    if (deviceIndex.has_value()) {
+    	m_physicalDevice = devices[*deviceIndex];
     }
 
     if (m_physicalDevice == VK_NULL_HANDLE) {
@@ -68,50 +120,6 @@ void HelloTriangleApplication::pickPhysicalDevice() {
 		std::cout << "Suitable GPU found:" << std::endl;
 		std::cout << getDeviceInfo(m_physicalDevice) << std::endl;
 	}
-}
-
-std::string HelloTriangleApplication::getDeviceInfo(const VkPhysicalDevice& device) {
-	std::string info;
-	
-	VkPhysicalDeviceProperties deviceProperties;
-	vkGetPhysicalDeviceProperties(device, &deviceProperties);
-	
-	info.append("Vendor: ");
-	switch(deviceProperties.vendorID) {
-		case 0x1002:
-			info.append("AMD");
-		break;
-		case 0x1010:
-			info.append("ImgTec");
-		break;
-		case 0x10DE:
-			info.append("NVIDIA");
-		break;
-		case 0x13B5:
-			info.append("ARM");
-		break;
-		case 0x5143:
-			info.append("Qualcomm");
-		break;
-		case 0x8086:
-			info.append("INTEL");
-		break;
-	}
-	info.append("\n");
-	
-	info.append("Name: ");
-	info.append(std::string(deviceProperties.deviceName));
-	info.append("\n");
-	
-	info.append("API version: ");
-	info.append(std::to_string(VK_API_VERSION_MAJOR(deviceProperties.apiVersion)));
-	info.append(".");
-	info.append(std::to_string(VK_API_VERSION_MINOR(deviceProperties.apiVersion)));
-	info.append(".");
-	info.append(std::to_string(VK_API_VERSION_PATCH(deviceProperties.apiVersion)));
-	info.append("\n");
-	
-	return info;
 }
 
 QueueFamilyIndices HelloTriangleApplication::findQueueFamilies(const VkPhysicalDevice& device) {
@@ -141,7 +149,6 @@ QueueFamilyIndices HelloTriangleApplication::findQueueFamilies(const VkPhysicalD
 bool HelloTriangleApplication::isDeviceSuitable(const VkPhysicalDevice& device) {
 	
 	if (m_debug) {
-		std::cout << "Evaluate device:" << std::endl;
 		std::cout << getDeviceInfo(device) << std::endl;
 	}
 	
@@ -273,6 +280,7 @@ void HelloTriangleApplication::cleanup() {
     }
 
 	// VK
+	vkDestroyDevice(m_device, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 	
 	// GLFW

@@ -1,5 +1,6 @@
 #include <cstring>
 #include <stdexcept>
+#include <sstream>
 #include <iostream>
 #include <vector>
 
@@ -90,46 +91,112 @@ std::string debugMgsg2str(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData) {
 
-	std::string str;
+	std::stringstream ss;
 
-	str.append("  SEVERITY: ");
+	ss << "  SEVERITY: ";
 	switch (messageSeverity) {
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-		str.append("diagnostic");
+		ss << "diagnostic";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-		str.append("informational");
+		ss << "informational";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-		str.append("warning");
+		ss << "warning";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-		str.append("error");
+		ss << "error";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
 		// Not an error
 		break;
 	}
-	str.append("\n");
+	ss << std::endl;
 
-	str.append("  TYPE: ");
+	ss << "  TYPE: ";
 	switch (messageType) {
 	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-		str.append("general");
+		ss << "general";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-		str.append("validation");
+		ss << "validation";
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-		str.append("performance");
+		ss << "performance";
 		break;
 	}
-	str.append("\n");
+	ss << std::endl;
 	// This is the actual error message
-	str.append(pCallbackData->pMessage);
-	str.append("\n");
+	ss << pCallbackData->pMessage;
+	ss << std::endl;
 
-	return str;
+	return ss.str();
+}
+
+std::string HelloTriangleApplication::getDeviceInfo(const VkPhysicalDevice& device) {
+
+	std::stringstream ss;
+	
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	
+	ss << "Vendor: ";
+	switch(deviceProperties.vendorID) {
+		case 0x1002:
+			ss << "AMD";
+		break;
+		case 0x1010:
+			ss << "ImgTec";
+		break;
+		case 0x10DE:
+			ss << "NVIDIA";
+		break;
+		case 0x13B5:
+			ss << "ARM";
+		break;
+		case 0x5143:
+			ss << "Qualcomm";
+		break;
+		case 0x8086:
+			ss << "INTEL";
+		break;
+		default:
+			ss << deviceProperties.vendorID;
+	}
+	ss << std::endl;
+	
+	ss << "Name: " << deviceProperties.deviceName << std::endl;
+	
+	ss << "API version: " << VK_API_VERSION_MAJOR(deviceProperties.apiVersion) << "." << VK_API_VERSION_MINOR(deviceProperties.apiVersion)
+	   << "." << VK_API_VERSION_PATCH(deviceProperties.apiVersion) << std::endl;
+	   
+	ss << "Device id: " << deviceProperties.deviceID << std::endl;
+	
+	ss << "Driver version: " << deviceProperties.driverVersion << std::endl;
+	
+	ss << "Type: ";
+	switch(deviceProperties.deviceType) {
+		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+			ss << "other";
+		break;
+		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+			ss << "Integrated GPU";
+		break;
+		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+			ss << "Discrete GPU";
+		break;
+		case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+			ss << "Virtual GPU";
+		break;
+		case VK_PHYSICAL_DEVICE_TYPE_CPU:
+			ss << "CPU";
+		break;
+		default:
+			ss << "Unknown type";
+	}
+	ss << std::endl;
+	
+	return ss.str();
 }
 
 
